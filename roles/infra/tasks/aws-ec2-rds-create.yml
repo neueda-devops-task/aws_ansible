@@ -1,0 +1,70 @@
+---
+- name: Create webserver instance
+  ec2:
+    region: "{{ aws_region }}"
+    vpc_subnet_id: "{{ web_subnet.subnet.id }}"
+    group_id: "{{ websecgroup.group_id }}"
+    instance_type: "{{ instance_type }}"
+    image: ami-02df9ea15c1778c9c
+    wait: true
+    keypair: "{{ aws_keypair }}"
+    exact_count: "{{ instance_count }}"
+    aws_secret_key: "{{ secret_key }}"
+    aws_access_key: "{{ access_key }}"
+    count_tag:
+        Name: "{{ env }}-webserver"
+        Environment: "{{ env }}"
+    instance_tags:
+        Name: "{{ env }}-webserver"
+        Environment: "{{ env }}"
+  register: created_ec2
+
+- name: Print webserver facts
+  debug:
+    msg: "{{ created_ec2.instances }}"
+    verbosity: 1
+
+- name: Create RDS subnet
+  rds_subnet_group:
+    region: "{{ aws_region }}"
+    secret_key: "{{ secret_key }}"
+    access_key: "{{ access_key }}"
+    state: present
+    name: rds-subnet
+    description: RDS subnet
+    subnets:
+      - "{{ database_subnets[0] }}"
+      - "{{ database_subnets[1] }}"
+  register: rds_subnet
+
+- name: Print RDS subnet facts
+  debug:
+    msg: "{{ rds_subnet }}"
+    verbosity: 1
+
+- name: Create RDS instance
+  rds:
+    region: "{{ aws_region }}"
+    secret_key: "{{ secret_key }}"
+    access_key: "{{ access_key }}"
+    command: create
+    instance_name: "{{ env }}-database"
+    db_engine: MySQL
+    size: 20
+    instance_type: "{{ db_instance_class }}"
+    subnet: rds-subnet
+    vpc_security_groups: "{{ dbsecgroup.group_id }}"
+    username: "{{ mysql_user }}"
+    password: "{{ mysql_password }}"
+    publicly_accessible: no
+    wait: yes
+    wait_timeout: 900
+    tags:
+        Name: "{{ env }}-database"
+        Environment: "{{ env }}"
+  register: rds_db
+
+- name: Print RDS endpoint
+  debug:
+    msg: "{{ rds_db.instance.endpoint }}"
+    verbosity: 1

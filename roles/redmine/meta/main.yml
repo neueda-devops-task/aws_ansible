@@ -1,0 +1,10 @@
+galaxy_info:
+  license: BSD
+  min_ansible_version: 2.7
+  platforms:
+    - name: Ubuntu
+      versions:
+        - 16.04
+  galaxy_tags:
+    - redmine
+dependencies: [ruby]

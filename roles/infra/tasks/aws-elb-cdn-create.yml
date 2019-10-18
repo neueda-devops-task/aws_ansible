@@ -1,0 +1,97 @@
+  ---
+- name: Create external ELB
+  ec2_elb_lb:
+    name: "{{ env }}-elb"
+    state: present
+    region: "{{ aws_region }}"
+    aws_secret_key: "{{ secret_key }}"
+    aws_access_key: "{{ access_key }}"
+    security_group_names: "WEB-SG"
+    wait: no
+    subnets: "{{ web_subnet.subnet.id }}"
+    purge_subnets: yes
+    cross_az_load_balancing: no
+    listeners:
+      - protocol: http
+        load_balancer_port: 80
+        instance_port: 80
+    health_check:
+      ping_protocol: http
+      ping_port: 80
+      ping_path: "/"
+      response_timeout: 5
+      interval: 10
+      unhealthy_threshold: 2
+      healthy_threshold: 2
+  register: web_elb
+
+- name: Print ELB endpoint
+  debug:
+    msg: "{{ web_elb.elb.dns_name }}"
+    verbosity: 1
+
+- name: Get facts on webserver instances
+  ec2_instance_facts:
+    aws_secret_key: "{{ secret_key }}"
+    aws_access_key: "{{ access_key }}"
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "{{ env }}-webserver"
+      "tag:Environment": "{{ env }}"
+      instance-state-name: running
+  register: webserver_gathered_facts
+
+- name: Add webserver instance to external ELB
+  ec2_elb:
+    region: "{{ aws_region }}"
+    secret_key: "{{ secret_key }}"
+    access_key: "{{ access_key }}"
+    ec2_elbs: "{{ web_elb.elb.name }}"
+    instance_id: "{{ item.instance_id }}"
+    state: present
+    wait: no
+  with_items:
+    - "{{ webserver_gathered_facts.instances }}"
+
+# Cloudfront module has an idempotency error https://github.com/ansible/ansible/pull/49434
+# Workaround to ignore idempotency error and random 403 API errors.
+- name: Create Cloudfront distribution for external ELB endpoint
+  cloudfront_distribution:
+    region: "{{ aws_region }}"
+    secret_key: "{{ secret_key }}"
+    access_key: "{{ access_key }}"
+    state: present
+    caller_reference: "{{ cdn_caller_reference }}"
+    default_origin_domain_name: "{{ web_elb.elb.dns_name }}"
+    default_cache_behavior:
+      forwarded_values:
+        query_string: true
+        cookies:
+          forward: all
+        headers:
+         - '*'
+      viewer_protocol_policy: allow-all
+      allowed_methods:
+        items:
+          - GET
+          - HEAD
+          - OPTIONS
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
+        cached_methods:
+          - GET
+          - HEAD
+    comment: "{{ env }}-distribution"
+    wait: no
+    tags:
+      Name: "{{ env }}-distribution"
+      Project: "{{ env }}"
+      Priority: '1'
+  register: cdn
+  until: cdn is success
+  retries: 10
+  delay: 2
+  notify: Print CDN endpoint
+  failed_when: False
