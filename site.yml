@@ -7,7 +7,7 @@
   gather_facts: false
 
   vars_files:
-    - ./group_vars/pass.yml
+    - ./vars/pass.yml
 
   roles:
     - infra
