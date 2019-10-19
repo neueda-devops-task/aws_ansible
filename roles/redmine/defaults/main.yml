@@ -4,7 +4,10 @@ redmine_path: "/home/ubuntu/redmine"
 db_host: "127.0.0.1"
 db_name: "redmine"
 db_username: "redmine"
-db_password: "T@sk1_An$ible"
+db_password: "Admin123"
+
+mysql_user: admin
+mysql_password: Admin123
 
 redmine_version: "4.0"
 redmine_lang: "en"

@@ -1,4 +1,4 @@
-  ---
+---
 - name: Create external ELB
   ec2_elb_lb:
     name: "{{ env }}-elb"

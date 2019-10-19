@@ -15,21 +15,33 @@
     msg: "{{ created_vpc.vpc.id }}"
     verbosity: 1
 
-- name: Create Private subnets for database servers
+- name: Create Private subnet 1 for database servers
   ec2_vpc_subnet:
     region: "{{ aws_region }}"
     secret_key: "{{ secret_key }}"
     access_key: "{{ access_key }}"
     state: present
-    az: "{{ item.az }}"
-    cidr: "{{ item.cidr }}"
+    vpc_id: "{{ created_vpc.vpc.id }}"
+    cidr: '172.16.10.0/24'
+    az: 'eu-west-1a'
     map_public: no
     tags:
-      Name: "{{ item.name }}"
+      Name: 'database-1'
+  register: database_subnet_1
+
+- name: Create Private subnet 2 for database servers
+  ec2_vpc_subnet:
+    region: "{{ aws_region }}"
+    secret_key: "{{ secret_key }}"
+    access_key: "{{ access_key }}"
+    state: present
     vpc_id: "{{ created_vpc.vpc.id }}"
-  with_items:
-    - "{{ db_subnet }}"
-  register: database_subnet
+    cidr: '172.16.11.0/24'
+    az: 'eu-west-1b'
+    map_public: no
+    tags:
+      Name: 'database-2'
+  register: database_subnet_2
 
 - name: Create Public subnet for web servers
   ec2_vpc_subnet:
@@ -49,16 +61,16 @@
     msg: "{{ web_subnet.subnet.id }}"
     verbosity: 1
 
-- name: Create a list of Private subnets
-  set_fact:
-    database_subnets: "{{ database_subnets }} + [ '{{ item.subnet.id }}' ]"
-  with_items:
-    - "{{ database_subnet.results }}"
+# - name: Create a list of Private subnets
+#   set_fact:
+#     database_subnets: "{{ database_subnets }} + [ '{{ item.subnet.id }}' ]"
+#   with_items:
+#     - "{{ database_subnet.results }}"
 
-- name: Print Private subnets list
-  debug:
-    msg: "{{ database_subnets }}"
-    verbosity: 1
+# - name: Print Private subnets list
+#   debug:
+#     msg: "{{ database_subnets }}"
+#     verbosity: 1
 
 - name: Create IGW
   ec2_vpc_igw:

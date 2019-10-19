@@ -33,8 +33,8 @@
     name: rds-subnet
     description: RDS subnet
     subnets:
-      - "{{ database_subnets[0] }}"
-      - "{{ database_subnets[1] }}"
+      - "{{ database_subnet_1.subnet.id }}"
+      - "{{ database_subnet_2.subnet.id }}"
   register: rds_subnet
 
 - name: Print RDS subnet facts

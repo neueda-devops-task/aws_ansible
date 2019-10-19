@@ -7,4 +7,4 @@ ansible_ssh_private_key_file: ./ansible-kp.pem
 
 # RDS credentials
 mysql_user: admin
-mysql_password: T@sk1_An$ible
+mysql_password: Admin123
